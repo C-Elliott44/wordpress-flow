@@ -48,7 +48,22 @@ Remove-Item -Path "$PSScriptRoot\latest.zip"
 
 Write-Host "WordPress has been downloaded and extracted to the folder: $clientDomain"
 
+$sourceFile = "$clientDomain/wp-config-sample.php"  # Replace with the path to your source file
+$destinationFolder = "$clientDomain"    # Replace with the path to your "site-folder"
 
+# The new name for the copied file
+$newFileName = "wp-config.php"
+
+# Combine the destination folder path with the new filename
+$destinationPath = Join-Path -Path $destinationFolder -ChildPath $newFileName
+
+try {
+    # Copy the source file to the destination folder with the new name
+    Copy-Item -Path $sourceFile -Destination $destinationPath
+    Write-Host "File copied to $destinationPath"
+} catch {
+    Write-Host "An error occurred: $_"
+}
 
 
 
