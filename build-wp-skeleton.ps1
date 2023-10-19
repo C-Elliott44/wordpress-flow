@@ -1,12 +1,26 @@
 # Specify the base directory where you want to check for the directory
 $baseDirectory = "C:\xampp\htdocs"
 
-# Get the client's domain from the user
+# Get the client's domain and password from the user
 $clientDomain = Read-Host "Enter the client's domain (e.g., example.com)"
+$clientPassword = Read-Host "Enter the client's password (e.g., wxa.kgj4mgw2MYB4zhg)"
+$clientPrefix = Read-Host "Enter the client's DB Prefix (e.g., dh_)"
 
 # Ensure the client's domain is not empty
 if ([string]::IsNullOrEmpty($clientDomain)) {
     Write-Host "Client's domain cannot be empty. Exiting."
+    exit
+}
+
+# Ensure the client's password is not empty
+if ([string]::IsNullOrEmpty($clientPassword)) {
+    Write-Host "Client's password cannot be empty. Exiting."
+    exit
+}
+
+# Ensure the client's prefix is not empty
+if ([string]::IsNullOrEmpty($clientPrefix)) {
+    Write-Host "Client's prefix cannot be empty. Exiting."
     exit
 }
 
@@ -65,7 +79,54 @@ try {
     Write-Host "An error occurred: $_"
 }
 
+# Remove everything from the period to the end
+$clientDomainNoExtention = $clientDomain -replace '\..*$', ''
 
+# Set concatinate config.php values
+$database = $clientDomainNoExtention + "_main"
+$username = $clientDomainNoExtention + "_admin"
+
+# Define the file path
+$filePath = "$PSScriptRoot\$clientDomain\wp-config.php"
+
+# Read the content of the file into a variable
+$content = Get-Content -Path $filePath -Raw
+
+# Define the URL
+$saltUrl = "https://api.wordpress.org/secret-key/1.1/salt/"
+
+# Use Invoke-RestMethod to retrieve the content from the saltURL
+$newSalts = Invoke-RestMethod -Uri $saltUrl
+
+# Set the old salts to be found and replaced
+$oldSalts = @"
+define( 'AUTH_KEY',         'put your unique phrase here' );
+define( 'SECURE_AUTH_KEY',  'put your unique phrase here' );
+define( 'LOGGED_IN_KEY',    'put your unique phrase here' );
+define( 'NONCE_KEY',        'put your unique phrase here' );
+define( 'AUTH_SALT',        'put your unique phrase here' );
+define( 'SECURE_AUTH_SALT', 'put your unique phrase here' );
+define( 'LOGGED_IN_SALT',   'put your unique phrase here' );
+define( 'NONCE_SALT',       'put your unique phrase here' );
+"@
+
+# Define an array of replacement patterns and corresponding new text
+$replacements = @(
+    @("database_name_here", $database),
+    @("username_here", $username),
+    @("password_here", $clientPassword),
+    @("'wp_'", "'$clientPrefix'"),
+    @($oldSalts, $newSalts)
+)
+
+# Loop through each replacement pattern and update the content
+foreach ($replacement in $replacements) {
+    $oldText, $newText = $replacement
+    $content = $content -replace [regex]::Escape($oldText), $newText
+}
+
+# Write the modified content back to the file
+$content | Set-Content -Path $filePath
 
 
 
