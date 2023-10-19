@@ -90,6 +90,7 @@ $username = $clientDomainNoExtention + "_admin"
 $filePath = "$PSScriptRoot\$clientDomain\wp-config.php"
 
 # Read the content of the file into a variable
+# Use {-Raw} at the end of a {Get-Content} in order to do multiline find and replace
 $content = Get-Content -Path $filePath -Raw
 
 # Define the URL
