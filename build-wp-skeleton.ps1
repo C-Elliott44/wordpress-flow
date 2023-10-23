@@ -129,9 +129,62 @@ foreach ($replacement in $replacements) {
 # Write the modified content back to the file
 $content | Set-Content -Path $filePath
 
+# Define the GitHub repository URL and the target directory
+$githubRepoUrl = "https://github.com/Automattic/_s.git"
+$targetDirectory = Join-Path $PSScriptRoot "$clientDomain\wp-content\themes"
 
+# Create the target directory if it doesn't exist
+if (-not (Test-Path -Path $targetDirectory -PathType Container)) {
+    New-Item -Path $targetDirectory -ItemType Directory -Force
+}
 
+# Clone the GitHub repository into the target directory
+git clone $githubRepoUrl $targetDirectory\_s
 
+# Rename the folder to $ClientsDomain
+Rename-Item -Path (Join-Path $targetDirectory "_s") -NewName (Join-Path $targetDirectory $clientDomainNoExtention) -Force
+
+# Define the directory where your files are located
+$underScoresDirectory = "$targetDirectory\$clientDomainNoExtention"
+
+# Define an array of find and replace pairs
+$themeTextDomain = "'$clientDomainNoExtention'"
+$themeFunctions = $clientDomainNoExtention + "_"
+$themeStyleDomain = "Text Domain: " + $clientDomainNoExtention
+$themeDocBlocks = " $clientDomainNoExtention"
+$themePrefixHandlers = "$clientDomainNoExtention-"
+$themeConstants = $clientDomainNoExtention.ToUpper() + "_"
+
+$findReplacePairs = @(
+    @{"Find" = "'_s'"; "Replace" = $themeTextDomain},
+    @{"Find" = "_s_"; "Replace" = $themeFunctions},
+    @{"Find" = "Text Domain: _s"; "Replace" = $themeStyleDomain},
+    @{"Find" = " _s"; "Replace" = $themeDocBlocks},
+    @{"Find" = "_s-"; "Replace" = $themePrefixHandlers},
+    @{"Find" = "_S_"; "Replace" = $themeConstants}
+)
+
+# Get a list of files in the specified directory and its subdirectories
+$files = Get-ChildItem -Path $underScoresDirectory -File -Recurse
+
+# Iterate through each file
+foreach ($file in $files) {
+    # Read the content of the file
+    $content = Get-Content $file.FullName
+
+    # Perform each find and replace pair
+    foreach ($pair in $findReplacePairs) {
+        $findText = $pair["Find"]
+        $replaceText = $pair["Replace"]
+        $content = $content -creplace [regex]::Escape($findText), $replaceText
+    }
+
+    # Save the modified content back to the file
+    Set-Content -Path $file.FullName -Value $content
+}
+
+# Output a message to indicate the process is complete
+Write-Host "Text replacements complete."
 
 
 
